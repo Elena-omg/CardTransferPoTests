@@ -1,8 +1,8 @@
 package ru.netology.pageobject;
 
 import com.codeborne.selenide.SelenideElement;
+import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.Wait;
 
 public class VerifyPage {
     private final SelenideElement codeField = $("[data-test-id=code] input");
@@ -11,8 +11,8 @@ public class VerifyPage {
     public DashboardPage validVerify(String code) {
         codeField.setValue(code);
         verifyButton.click();
-        // Ждём, пока URL изменится на /dashboard
-        Wait().until(driver -> driver.getCurrentUrl().contains("dashboard"));
+        // Простое ожидание появления кнопки
+        $("[data-test-id=action-deposit]").shouldBe(visible);
         return new DashboardPage();
     }
 }

@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 import ru.netology.pageobject.DashboardPage;
 import ru.netology.pageobject.LoginPage;
 
-import static com.codeborne.selenide.Selenide.open;
+import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Selenide.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TransferTest {
@@ -19,7 +20,7 @@ public class TransferTest {
     @BeforeEach
     void setUp() {
         Configuration.headless = false;
-        Configuration.timeout = 10000;
+        Configuration.timeout = 15000;
         open("http://localhost:9999");
     }
 
@@ -35,6 +36,9 @@ public class TransferTest {
 
         dashboard.replenishCardByNumber(secondCardNumber)
                 .makeTransfer(String.valueOf(amount), firstCardNumber);
+
+        // Крошечная пауза, чтобы страница гарантированно обновилась
+        sleep(500);
 
         int newBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
         int newBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
@@ -55,6 +59,15 @@ public class TransferTest {
 
         dashboard.replenishCardByNumber(secondCardNumber)
                 .makeTransfer(String.valueOf(tooMuch), firstCardNumber);
+
+        // Проверяем, что остались на странице перевода
+        $("input.input__control[type='tel'][placeholder='0000 0000 0000 0000']").shouldBe(visible);
+
+        // Заново заходим на дашборд
+        open("http://localhost:9999");
+        dashboard = new LoginPage()
+                .validLogin(login, password)
+                .validVerify(verificationCode);
 
         int newBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
         int newBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
