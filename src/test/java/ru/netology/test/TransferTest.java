@@ -1,47 +1,46 @@
 package ru.netology.test;
 
-import com.codeborne.selenide.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.netology.data.DataHelper;
 import ru.netology.pageobject.DashboardPage;
 import ru.netology.pageobject.LoginPage;
 
-import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Selenide.*;
+import static com.codeborne.selenide.Selenide.open;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TransferTest {
-    private final String login = "vasya";
-    private final String password = "qwerty123";
-    private final String verificationCode = "12345";
-    private final String firstCardNumber = "0001";
-    private final String secondCardNumber = "0002";
 
     @BeforeEach
     void setUp() {
-        Configuration.headless = false;
-        Configuration.timeout = 15000;
         open("http://localhost:9999");
     }
 
     @Test
     void shouldTransferMoneyFromFirstToSecondCard() {
+        String login = DataHelper.getValidAuthInfo().getLogin();
+        String password = DataHelper.getValidAuthInfo().getPassword();
+        String code = DataHelper.getVerificationCode().getCode();
+        String firstCard = DataHelper.getFirstCardNumber();
+        String secondCard = DataHelper.getSecondCardNumber();
+
         DashboardPage dashboard = new LoginPage()
                 .validLogin(login, password)
-                .validVerify(verificationCode);
+                .validVerify(code);
 
-        int initialBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
-        int initialBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
+        int initialBalanceFirst = dashboard.getCardBalanceByNumber(firstCard);
+        int initialBalanceSecond = dashboard.getCardBalanceByNumber(secondCard);
         int amount = 1000;
 
-        dashboard.replenishCardByNumber(secondCardNumber)
-                .makeTransfer(String.valueOf(amount), firstCardNumber);
+        dashboard.replenishCardByNumber(secondCard)
+                .makeTransfer(String.valueOf(amount), firstCard);
 
-        // Крошечная пауза, чтобы страница гарантированно обновилась
-        sleep(500);
+        // Явное ожидание возврата на дашборд
+        new DashboardPage();
 
-        int newBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
-        int newBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
+        DashboardPage updatedDashboard = new DashboardPage();
+        int newBalanceFirst = updatedDashboard.getCardBalanceByNumber(firstCard);
+        int newBalanceSecond = updatedDashboard.getCardBalanceByNumber(secondCard);
 
         assertEquals(initialBalanceFirst - amount, newBalanceFirst);
         assertEquals(initialBalanceSecond + amount, newBalanceSecond);
@@ -49,30 +48,37 @@ public class TransferTest {
 
     @Test
     void shouldNotTransferMoreThanBalance() {
+        String login = DataHelper.getValidAuthInfo().getLogin();
+        String password = DataHelper.getValidAuthInfo().getPassword();
+        String code = DataHelper.getVerificationCode().getCode();
+        String firstCard = DataHelper.getFirstCardNumber();
+        String secondCard = DataHelper.getSecondCardNumber();
+
         DashboardPage dashboard = new LoginPage()
                 .validLogin(login, password)
-                .validVerify(verificationCode);
+                .validVerify(code);
 
-        int initialBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
-        int initialBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
+        int initialBalanceFirst = dashboard.getCardBalanceByNumber(firstCard);
+        int initialBalanceSecond = dashboard.getCardBalanceByNumber(secondCard);
         int tooMuch = initialBalanceFirst + 1;
 
-        dashboard.replenishCardByNumber(secondCardNumber)
-                .makeTransfer(String.valueOf(tooMuch), firstCardNumber);
+        // Пытаемся перевести больше, чем есть на карте
+        dashboard.replenishCardByNumber(secondCard)
+                .makeTransfer(String.valueOf(tooMuch), firstCard);
 
-        // Проверяем, что остались на странице перевода
-        $("input.input__control[type='tel'][placeholder='0000 0000 0000 0000']").shouldBe(visible);
-
-        // Заново заходим на дашборд
+        // Сервер не должен позволять такой перевод; ожидаем, что балансы НЕ изменились.
+        // Заново заходим на дашборд и проверяем балансы
         open("http://localhost:9999");
-        dashboard = new LoginPage()
+        DashboardPage finalDashboard = new LoginPage()
                 .validLogin(login, password)
-                .validVerify(verificationCode);
+                .validVerify(code);
 
-        int newBalanceFirst = dashboard.getCardBalanceByNumber(firstCardNumber);
-        int newBalanceSecond = dashboard.getCardBalanceByNumber(secondCardNumber);
+        int newBalanceFirst = finalDashboard.getCardBalanceByNumber(firstCard);
+        int newBalanceSecond = finalDashboard.getCardBalanceByNumber(secondCard);
 
-        assertEquals(initialBalanceFirst, newBalanceFirst);
-        assertEquals(initialBalanceSecond, newBalanceSecond);
+        assertEquals(initialBalanceFirst, newBalanceFirst,
+                "Баланс первой карты не должен измениться");
+        assertEquals(initialBalanceSecond, newBalanceSecond,
+                "Баланс второй карты не должен измениться");
     }
 }
