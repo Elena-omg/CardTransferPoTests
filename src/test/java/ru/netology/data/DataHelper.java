@@ -1,28 +1,18 @@
 package ru.netology.data;
 
+import lombok.Value;
+
 public class DataHelper {
 
+    @Value
     public static class AuthInfo {
-        private final String login;
-        private final String password;
-
-        public AuthInfo(String login, String password) {
-            this.login = login;
-            this.password = password;
-        }
-
-        public String getLogin() { return login; }
-        public String getPassword() { return password; }
+        String login;
+        String password;
     }
 
+    @Value
     public static class VerificationCode {
-        private final String code;
-
-        public VerificationCode(String code) {
-            this.code = code;
-        }
-
-        public String getCode() { return code; }
+        String code;
     }
 
     public static AuthInfo getValidAuthInfo() {
